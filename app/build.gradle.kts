@@ -1,5 +1,7 @@
 plugins {
     alias(libs.plugins.android.application)
+    // Add the Google services Gradle plugin
+    id("com.google.gms.google-services")
 }
 
 android {
@@ -33,6 +35,7 @@ android {
 }
 
 dependencies {
+    implementation(platform("com.google.firebase:firebase-bom:35.1.0"))
     implementation(libs.androidx.appcompat)
     implementation(libs.androidx.core.ktx)
     implementation(libs.material)
