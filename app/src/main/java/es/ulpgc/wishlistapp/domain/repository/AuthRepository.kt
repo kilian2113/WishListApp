@@ -1,4 +1,4 @@
-package es.ulpgc.wishlistapp.data.repository
+package es.ulpgc.wishlistapp.domain.repository
 
 import es.ulpgc.wishlistapp.domain.model.User
 

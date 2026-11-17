@@ -4,7 +4,7 @@ import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import es.ulpgc.wishlistapp.data.repository.AuthRepository
+import es.ulpgc.wishlistapp.domain.repository.AuthRepository
 import kotlinx.coroutines.launch
 
 class RegisterViewModel(

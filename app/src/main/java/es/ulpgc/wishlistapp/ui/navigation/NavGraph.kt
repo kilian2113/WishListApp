@@ -13,17 +13,15 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavHostController
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
-import es.ulpgc.wishlistapp.data.repository.AuthRepositoryImpl
 import es.ulpgc.wishlistapp.ui.register.RegisterScreen
 import es.ulpgc.wishlistapp.ui.register.RegisterViewModel
-import es.ulpgc.wishlistapp.ui.register.RegisterViewModelFactory
+import org.koin.androidx.compose.koinViewModel
 
 sealed class Screen(val route: String) {
     data object Register : Screen("register")
@@ -38,16 +36,12 @@ fun NavGraph(
     navController: NavHostController = rememberNavController(),
     startDestination: String = Screen.Register.route
 ) {
-    val authRepository = AuthRepositoryImpl()
-
     NavHost(
         navController = navController,
         startDestination = startDestination
     ) {
         composable(Screen.Register.route) {
-            val registerViewModel: RegisterViewModel = viewModel(
-                factory = RegisterViewModelFactory(authRepository)
-            )
+            val registerViewModel: RegisterViewModel = koinViewModel()
 
             RegisterScreen(
                 viewModel = registerViewModel,

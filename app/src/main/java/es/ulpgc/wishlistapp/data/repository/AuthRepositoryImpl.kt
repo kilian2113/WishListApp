@@ -3,6 +3,7 @@ package es.ulpgc.wishlistapp.data.repository
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.auth.UserProfileChangeRequest
 import es.ulpgc.wishlistapp.domain.model.User
+import es.ulpgc.wishlistapp.domain.repository.AuthRepository
 import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlin.coroutines.resume
 
