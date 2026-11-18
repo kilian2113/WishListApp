@@ -19,6 +19,8 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
+import es.ulpgc.wishlistapp.ui.login.LoginScreen
+import es.ulpgc.wishlistapp.ui.login.LoginViewModel
 import es.ulpgc.wishlistapp.ui.register.RegisterScreen
 import es.ulpgc.wishlistapp.ui.register.RegisterViewModel
 import org.koin.androidx.compose.koinViewModel
@@ -34,12 +36,28 @@ sealed class Screen(val route: String) {
 @Composable
 fun NavGraph(
     navController: NavHostController = rememberNavController(),
-    startDestination: String = Screen.Register.route
+    startDestination: String = Screen.SignIn.route
 ) {
     NavHost(
         navController = navController,
         startDestination = startDestination
     ) {
+        composable(Screen.SignIn.route) {
+            val loginViewModel: LoginViewModel = koinViewModel()
+
+            LoginScreen(
+                viewModel = loginViewModel,
+                onNavigateToRegister = {
+                    navController.navigate(Screen.Register.route)
+                },
+                onLoginSuccess = { userName ->
+                    navController.navigate(Screen.Home.createRoute(userName)) {
+                        popUpTo(Screen.SignIn.route) { inclusive = true }
+                    }
+                }
+            )
+        }
+
         composable(Screen.Register.route) {
             val registerViewModel: RegisterViewModel = koinViewModel()
 
@@ -76,23 +94,8 @@ fun NavGraph(
                 )
                 Spacer(modifier = Modifier.height(8.dp))
                 Text(
-                    text = "Has completado el registro exitosamente.",
+                    text = "Has iniciado sesión exitosamente.",
                     style = MaterialTheme.typography.bodyLarge
-                )
-            }
-        }
-
-        composable(Screen.SignIn.route) {
-            Column(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(24.dp),
-                horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.Center
-            ) {
-                Text(
-                    text = "Iniciar Sesión",
-                    style = MaterialTheme.typography.headlineMedium
                 )
             }
         }

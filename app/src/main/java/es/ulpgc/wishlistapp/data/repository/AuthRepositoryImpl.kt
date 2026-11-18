@@ -40,7 +40,6 @@ class AuthRepositoryImpl(
                                         "birthDate" to birthDate
                                     )
 
-                                    // Guardar los datos en la tabla/colección "users" de Firestore
                                     firestore.collection("users")
                                         .document(firebaseUser.uid)
                                         .set(userMap)
@@ -73,6 +72,61 @@ class AuthRepositoryImpl(
                         }
                     } else {
                         val exception = task.exception ?: Exception("Error al registrar el usuario en Firebase.")
+                        if (continuation.isActive) {
+                            continuation.resume(Result.failure(exception))
+                        }
+                    }
+                }
+        }
+    }
+
+    override suspend fun signInWithEmail(
+        email: String,
+        password: String
+    ): Result<User> {
+        return suspendCancellableCoroutine { continuation ->
+            firebaseAuth.signInWithEmailAndPassword(email, password)
+                .addOnCompleteListener { task ->
+                    if (task.isSuccessful) {
+                        val firebaseUser = firebaseAuth.currentUser
+                        if (firebaseUser != null) {
+                            firestore.collection("users")
+                                .document(firebaseUser.uid)
+                                .get()
+                                .addOnSuccessListener { document ->
+                                    val name = document.getString("name") ?: firebaseUser.displayName ?: ""
+                                    val username = document.getString("username") ?: ""
+                                    val birthDate = document.getString("birthDate") ?: ""
+                                    val user = User(
+                                        uid = firebaseUser.uid,
+                                        name = name,
+                                        username = username,
+                                        email = email,
+                                        birthDate = birthDate
+                                    )
+                                    if (continuation.isActive) {
+                                        continuation.resume(Result.success(user))
+                                    }
+                                }
+                                .addOnFailureListener {
+                                    val user = User(
+                                        uid = firebaseUser.uid,
+                                        name = firebaseUser.displayName ?: "",
+                                        username = "",
+                                        email = email,
+                                        birthDate = ""
+                                    )
+                                    if (continuation.isActive) {
+                                        continuation.resume(Result.success(user))
+                                    }
+                                }
+                        } else {
+                            if (continuation.isActive) {
+                                continuation.resume(Result.failure(Exception("Error al obtener información de inicio de sesión.")))
+                            }
+                        }
+                    } else {
+                        val exception = task.exception ?: Exception("Error de inicio de sesión. Revisa tus credenciales.")
                         if (continuation.isActive) {
                             continuation.resume(Result.failure(exception))
                         }
