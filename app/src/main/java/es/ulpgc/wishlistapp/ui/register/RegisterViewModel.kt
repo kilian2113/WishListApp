@@ -6,6 +6,10 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import es.ulpgc.wishlistapp.domain.repository.AuthRepository
 import kotlinx.coroutines.launch
+import java.text.SimpleDateFormat
+import java.util.Calendar
+import java.util.Date
+import java.util.Locale
 
 class RegisterViewModel(
     private val authRepository: AuthRepository
@@ -52,6 +56,48 @@ class RegisterViewModel(
         updateState { it.copy(isConfirmPasswordVisible = !it.isConfirmPasswordVisible) }
     }
 
+    private fun validateBirthDate(birthDateStr: String): String? {
+        val trimmed = birthDateStr.trim()
+        if (trimmed.isBlank()) {
+            return "La fecha de nacimiento es obligatoria"
+        }
+
+        val dateRegex = Regex("^\\d{2}/\\d{2}/\\d{4}\$")
+        if (!dateRegex.matches(trimmed)) {
+            return "Introduce una fecha válida (DD/MM/AAAA)"
+        }
+
+        val sdf = SimpleDateFormat("dd/MM/yyyy", Locale.getDefault()).apply {
+            isLenient = false
+        }
+
+        val birthDate: Date = try {
+            sdf.parse(trimmed) ?: return "Fecha de nacimiento no válida"
+        } catch (_: Exception) {
+            return "Fecha de nacimiento no válida"
+        }
+
+        val birthCalendar = Calendar.getInstance().apply {
+            time = birthDate
+        }
+        val today = Calendar.getInstance()
+
+        if (birthCalendar.after(today)) {
+            return "La fecha de nacimiento no puede ser futura"
+        }
+
+        var age = today.get(Calendar.YEAR) - birthCalendar.get(Calendar.YEAR)
+        if (today.get(Calendar.DAY_OF_YEAR) < birthCalendar.get(Calendar.DAY_OF_YEAR)) {
+            age--
+        }
+
+        if (age < 18) {
+            return "Debes ser mayor de 18 años para registrarte"
+        }
+
+        return null
+    }
+
     fun register() {
         val currentState = _state.value ?: RegisterState()
         var hasError = false
@@ -82,8 +128,9 @@ class RegisterViewModel(
             hasError = true
         }
 
-        if (currentState.birthDate.isBlank()) {
-            birthDateErr = "La fecha de nacimiento es obligatoria"
+        val bDateError = validateBirthDate(currentState.birthDate)
+        if (bDateError != null) {
+            birthDateErr = bDateError
             hasError = true
         }
 
