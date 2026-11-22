@@ -4,7 +4,9 @@ import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import es.ulpgc.wishlistapp.domain.model.UsernamePolicy
 import es.ulpgc.wishlistapp.domain.repository.AuthRepository
+import es.ulpgc.wishlistapp.domain.repository.UsernameAlreadyTakenException
 import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
 import java.util.Calendar
@@ -115,9 +117,16 @@ class RegisterViewModel(
             hasError = true
         }
 
-        if (currentState.username.isBlank()) {
-            usernameErr = "El nombre de usuario es obligatorio"
-            hasError = true
+        val username = UsernamePolicy.normalize(currentState.username)
+        when {
+            username.isBlank() -> {
+                usernameErr = "El nombre de usuario es obligatorio"
+                hasError = true
+            }
+            !UsernamePolicy.isValid(username) -> {
+                usernameErr = "Usa entre 3 y 20 letras, números o guiones bajos."
+                hasError = true
+            }
         }
 
         if (currentState.email.isBlank()) {
@@ -176,7 +185,7 @@ class RegisterViewModel(
         viewModelScope.launch {
             val result = authRepository.signUpWithEmail(
                 name = currentState.name.trim(),
-                username = currentState.username.trim(),
+                username = username,
                 email = currentState.email.trim(),
                 birthDate = currentState.birthDate.trim(),
                 password = currentState.password
@@ -192,10 +201,18 @@ class RegisterViewModel(
                 }
             }.onFailure { exception ->
                 updateState {
-                    it.copy(
-                        isLoading = false,
-                        error = exception.localizedMessage ?: "Error al procesar el registro"
-                    )
+                    if (exception is UsernameAlreadyTakenException) {
+                        it.copy(
+                            isLoading = false,
+                            usernameError = exception.localizedMessage,
+                            error = null
+                        )
+                    } else {
+                        it.copy(
+                            isLoading = false,
+                            error = exception.localizedMessage ?: "Error al procesar el registro"
+                        )
+                    }
                 }
             }
         }
