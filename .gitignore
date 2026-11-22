@@ -18,3 +18,10 @@ local.properties
 app/google-services.json
 
 AGENT.md
+
+# Android Studio local IDE files
+/.idea/codeStyles/
+/.idea/deploymentTargetSelector.xml
+/.idea/compiler.xml
+/.idea/misc.xml
+/gradle/gradle-daemon-jvm.properties
