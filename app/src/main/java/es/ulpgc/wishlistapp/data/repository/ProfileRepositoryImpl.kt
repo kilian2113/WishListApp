@@ -1,13 +1,18 @@
 package es.ulpgc.wishlistapp.data.repository
 
+import android.util.Log
 import com.google.android.gms.tasks.Task
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.DocumentSnapshot
 import com.google.firebase.firestore.FirebaseFirestore
+import com.google.firebase.firestore.FirebaseFirestoreException
 import com.google.firebase.firestore.SetOptions
 import es.ulpgc.wishlistapp.domain.model.EditableProfile
+import es.ulpgc.wishlistapp.domain.model.UsernamePolicy
 import es.ulpgc.wishlistapp.domain.model.UserProfile
+import es.ulpgc.wishlistapp.domain.repository.BackendPermissionDeniedException
 import es.ulpgc.wishlistapp.domain.repository.ProfileRepository
+import es.ulpgc.wishlistapp.domain.repository.UsernameAlreadyTakenException
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.suspendCancellableCoroutine
 import java.security.SecureRandom
@@ -25,6 +30,7 @@ class ProfileRepositoryImpl(
 ) : ProfileRepository {
 
     private val secureRandom = SecureRandom()
+    private val usernameRegistry = UsernameRegistry(firestore)
 
     override suspend fun loadOwnProfile(): Result<UserProfile> {
         val firebaseUser = firebaseAuth.currentUser
@@ -100,17 +106,56 @@ class ProfileRepositoryImpl(
     override suspend fun updateOwnProfile(profile: EditableProfile): Result<Unit> {
         val firebaseUser = firebaseAuth.currentUser
             ?: return Result.failure(IllegalStateException("No hay una sesión iniciada."))
+        val username = UsernamePolicy.normalize(profile.username)
+        if (!UsernamePolicy.isValid(username)) {
+            return Result.failure(
+                IllegalArgumentException(
+                    "El nombre de usuario debe tener entre 3 y 20 caracteres: letras, números o guion bajo."
+                )
+            )
+        }
 
         return try {
-            firestore.collection("users")
-                .document(firebaseUser.uid)
-                .update(profile.toFirestoreFields())
-                .await()
-            Result.success(Unit)
+            when (firestore.runTransaction { transaction ->
+                val userReference = firestore.collection("users").document(firebaseUser.uid)
+                val userDocument = transaction.get(userReference)
+                if (!userDocument.exists()) {
+                    return@runTransaction ProfileUpdateResult.ProfileMissing
+                }
+
+                val currentUsername = userDocument.getString("username").orEmpty()
+                if (usernameRegistry.reserve(
+                        transaction = transaction,
+                        uid = firebaseUser.uid,
+                        currentUsername = currentUsername,
+                        newUsername = username
+                    ) == UsernameRegistry.ReservationResult.AlreadyTaken
+                ) {
+                    return@runTransaction ProfileUpdateResult.UsernameTaken
+                }
+
+                transaction.update(userReference, profile.toFirestoreFields(username))
+
+                ProfileUpdateResult.Updated
+            }.await()) {
+                ProfileUpdateResult.Updated -> Result.success(Unit)
+                ProfileUpdateResult.UsernameTaken -> Result.failure(UsernameAlreadyTakenException())
+                ProfileUpdateResult.ProfileMissing -> {
+                    Result.failure(IllegalStateException("No se encontró el perfil del usuario."))
+                }
+            }
         } catch (exception: CancellationException) {
             throw exception
         } catch (exception: Exception) {
-            Result.failure(exception)
+            if (
+                exception is FirebaseFirestoreException &&
+                exception.code == FirebaseFirestoreException.Code.PERMISSION_DENIED
+            ) {
+                Log.e(TAG, "Firestore denied profile update.", exception)
+                Result.failure(BackendPermissionDeniedException(exception))
+            } else {
+                Result.failure(exception)
+            }
         }
     }
 
@@ -196,7 +241,7 @@ class ProfileRepositoryImpl(
     private fun DocumentSnapshot.getStringList(field: String): List<String> =
         (get(field) as? List<*>)?.filterIsInstance<String>().orEmpty()
 
-    private fun EditableProfile.toFirestoreFields(): Map<String, Any> = mapOf(
+    private fun EditableProfile.toFirestoreFields(username: String): Map<String, Any> = mapOf(
         "username" to username,
         "name" to name,
         "description" to description,
@@ -226,9 +271,19 @@ class ProfileRepositoryImpl(
         data object CodeTaken : ProfileInitializationResult
     }
 
+    private sealed interface ProfileUpdateResult {
+        data object Updated : ProfileUpdateResult
+        data object UsernameTaken : ProfileUpdateResult
+        data object ProfileMissing : ProfileUpdateResult
+    }
+
     private sealed interface FriendCodeRegenerationResult {
         data class Regenerated(val code: String) : FriendCodeRegenerationResult
         data object CodeTaken : FriendCodeRegenerationResult
         data object ProfileMissing : FriendCodeRegenerationResult
+    }
+
+    private companion object {
+        const val TAG = "ProfileRepository"
     }
 }

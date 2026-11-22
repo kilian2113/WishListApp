@@ -5,8 +5,10 @@ import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import es.ulpgc.wishlistapp.domain.model.EditableProfile
+import es.ulpgc.wishlistapp.domain.model.UsernamePolicy
 import es.ulpgc.wishlistapp.domain.model.UserProfile
 import es.ulpgc.wishlistapp.domain.repository.ProfileRepository
+import es.ulpgc.wishlistapp.domain.repository.UsernameAlreadyTakenException
 import kotlinx.coroutines.launch
 
 class ProfileViewModel(
@@ -110,10 +112,12 @@ class ProfileViewModel(
         val currentState = _state.value ?: return
         val draft = currentState.draft ?: return
         val nameError = if (draft.name.isBlank()) "El nombre es obligatorio." else null
-        val usernameError = if (draft.username.isBlank()) {
-            "El nombre de usuario es obligatorio."
-        } else {
-            null
+        val username = UsernamePolicy.normalize(draft.username)
+        val usernameError = when {
+            username.isBlank() -> "El nombre de usuario es obligatorio."
+            !UsernamePolicy.isValid(username) ->
+                "Usa entre 3 y 20 letras, números o guiones bajos."
+            else -> null
         }
 
         if (nameError != null || usernameError != null) {
@@ -149,7 +153,16 @@ class ProfileViewModel(
                     updateState {
                         it.copy(
                             isSaving = false,
-                            error = exception.localizedMessage ?: "No se pudo guardar el perfil."
+                            usernameError = if (exception is UsernameAlreadyTakenException) {
+                                exception.localizedMessage
+                            } else {
+                                it.usernameError
+                            },
+                            error = if (exception is UsernameAlreadyTakenException) {
+                                null
+                            } else {
+                                exception.localizedMessage ?: "No se pudo guardar el perfil."
+                            }
                         )
                     }
                 }
