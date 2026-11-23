@@ -3,13 +3,25 @@ package es.ulpgc.wishlistapp.ui.friends
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.statusBarsPadding
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
+import androidx.compose.material3.Card
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
@@ -30,11 +42,13 @@ import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
+import es.ulpgc.wishlistapp.ui.components.ProfileAvatar
 
 @Composable
 fun FriendsScreen(viewModel: FriendsViewModel) {
     val state by viewModel.state.observeAsState(FriendsState())
     val snackbarHostState = remember { SnackbarHostState() }
+    val friendsError = state.friendsError
 
     LaunchedEffect(state.successMessage) {
         state.successMessage?.let { message ->
@@ -44,10 +58,85 @@ fun FriendsScreen(viewModel: FriendsViewModel) {
     }
 
     Box(modifier = Modifier.fillMaxSize()) {
-        Text(
-            text = "Pulsa + para añadir un amigo.",
-            modifier = Modifier.align(Alignment.Center)
-        )
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .statusBarsPadding()
+        ) {
+            OutlinedTextField(
+                value = state.searchQuery,
+                onValueChange = {
+                    viewModel.onEvent(FriendsEvent.SearchQueryChanged(it))
+                },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp, vertical = 4.dp)
+                    .height(52.dp),
+                label = { Text("Buscar amigo") },
+                leadingIcon = {
+                    Icon(Icons.Default.Search, contentDescription = null)
+                },
+                singleLine = true,
+                shape = RoundedCornerShape(24.dp)
+            )
+
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .weight(1f),
+                contentAlignment = Alignment.Center
+            ) {
+                when {
+                    state.isLoadingFriends && state.friends.isEmpty() -> {
+                        CircularProgressIndicator()
+                    }
+                    friendsError != null -> {
+                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                            Text(
+                                text = friendsError,
+                                color = MaterialTheme.colorScheme.error
+                            )
+                            TextButton(
+                                onClick = {
+                                    viewModel.onEvent(FriendsEvent.RetryLoadingFriends)
+                                }
+                            ) {
+                                Text("Reintentar")
+                            }
+                        }
+                    }
+                    state.friends.isEmpty() -> {
+                        Text("Aún no tienes amigos. Pulsa + para añadir uno.")
+                    }
+                    state.filteredFriends.isEmpty() -> {
+                        Text("No hay amigos que coincidan con la búsqueda.")
+                    }
+                    else -> {
+                        LazyColumn(
+                            modifier = Modifier.fillMaxSize(),
+                            contentPadding = PaddingValues(
+                                start = 16.dp,
+                                top = 12.dp,
+                                end = 16.dp,
+                                bottom = 88.dp
+                            ),
+                            verticalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            items(
+                                items = state.filteredFriends,
+                                key = { friend -> friend.uid }
+                            ) { friend ->
+                                FriendRow(
+                                    name = friend.name,
+                                    username = friend.username,
+                                    avatarId = friend.avatarId
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+        }
         FloatingActionButton(
             onClick = { viewModel.onEvent(FriendsEvent.AddFriendClicked) },
             modifier = Modifier
@@ -120,5 +209,41 @@ fun FriendsScreen(viewModel: FriendsViewModel) {
                 }
             }
         )
+    }
+}
+
+@Composable
+private fun FriendRow(
+    name: String,
+    username: String,
+    avatarId: String
+) {
+    Card(modifier = Modifier.fillMaxWidth()) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp, vertical = 12.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            ProfileAvatar(
+                avatarId = avatarId,
+                modifier = Modifier.size(40.dp)
+            )
+            Spacer(modifier = Modifier.size(12.dp))
+            Column {
+                Text(
+                    text = name,
+                    style = MaterialTheme.typography.titleMedium
+                )
+                if (username.isNotBlank()) {
+                    Spacer(modifier = Modifier.height(2.dp))
+                    Text(
+                        text = "@$username",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            }
+        }
     }
 }

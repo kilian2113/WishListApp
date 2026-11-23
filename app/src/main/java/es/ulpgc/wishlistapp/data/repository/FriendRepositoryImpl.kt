@@ -2,12 +2,17 @@ package es.ulpgc.wishlistapp.data.repository
 
 import com.google.android.gms.tasks.Task
 import com.google.firebase.auth.FirebaseAuth
+import com.google.firebase.firestore.FieldPath
 import com.google.firebase.firestore.FieldValue
 import com.google.firebase.firestore.FirebaseFirestore
+import com.google.firebase.firestore.Query
+import es.ulpgc.wishlistapp.domain.model.DEFAULT_PROFILE_AVATAR_ID
+import es.ulpgc.wishlistapp.domain.model.Friend
 import es.ulpgc.wishlistapp.domain.model.FriendCodePolicy
 import es.ulpgc.wishlistapp.domain.repository.CannotAddYourselfException
 import es.ulpgc.wishlistapp.domain.repository.FriendAlreadyAddedException
 import es.ulpgc.wishlistapp.domain.repository.FriendCodeNotFoundException
+import es.ulpgc.wishlistapp.domain.repository.FriendProfileNotFoundException
 import es.ulpgc.wishlistapp.domain.repository.FriendRepository
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.suspendCancellableCoroutine
@@ -18,6 +23,62 @@ class FriendRepositoryImpl(
     private val firebaseAuth: FirebaseAuth,
     private val firestore: FirebaseFirestore
 ) : FriendRepository {
+
+    override suspend fun loadFriends(): Result<List<Friend>> {
+        val currentUid = firebaseAuth.currentUser?.uid
+            ?: return Result.failure(IllegalStateException("No hay una sesión iniciada."))
+
+        return try {
+            val friendDocuments = firestore.collection("users")
+                .document(currentUid)
+                .collection("friends")
+                .orderBy("addedAt", Query.Direction.DESCENDING)
+                .get()
+                .await()
+            val friendUids = friendDocuments.documents.map { document ->
+                document.getString("uid")
+                    ?: throw IllegalStateException("Hay una amistad guardada sin UID.")
+            }.distinct()
+
+            if (friendUids.isEmpty()) {
+                return Result.success(emptyList())
+            }
+
+            val friendProfiles = friendUids
+                .chunked(MAX_PROFILE_LOOKUP_IDS)
+                .flatMap { uids ->
+                    firestore.collection("users")
+                        .whereIn(FieldPath.documentId(), uids)
+                        .get()
+                        .await()
+                        .documents
+                }
+                .associateBy { it.id }
+
+            Result.success(
+                friendUids.map { friendUid ->
+                    val profile = friendProfiles[friendUid]
+                        ?: throw FriendProfileNotFoundException()
+                    val username = profile.getString("username").orEmpty()
+                    val name = profile.getString("name")
+                        ?.takeIf(String::isNotBlank)
+                        ?: username.takeIf(String::isNotBlank)
+                        ?: throw FriendProfileNotFoundException()
+
+                    Friend(
+                        uid = friendUid,
+                        name = name,
+                        username = username,
+                        avatarId = profile.getString("avatarId") ?: DEFAULT_PROFILE_AVATAR_ID
+                    )
+                }
+            )
+        } catch (exception: CancellationException) {
+            throw exception
+        } catch (exception: Exception) {
+            Result.failure(exception)
+        }
+    }
 
     override suspend fun addFriendByCode(code: String): Result<Unit> {
         val currentUid = firebaseAuth.currentUser?.uid
@@ -87,5 +148,9 @@ class FriendRepositoryImpl(
         data object CodeNotFound : AddFriendResult
         data object AlreadyAdded : AddFriendResult
         data object CannotAddSelf : AddFriendResult
+    }
+
+    private companion object {
+        const val MAX_PROFILE_LOOKUP_IDS = 30
     }
 }

@@ -7,6 +7,7 @@ import com.google.firebase.firestore.DocumentSnapshot
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.FirebaseFirestoreException
 import com.google.firebase.firestore.SetOptions
+import es.ulpgc.wishlistapp.domain.model.DEFAULT_PROFILE_AVATAR_ID
 import es.ulpgc.wishlistapp.domain.model.EditableProfile
 import es.ulpgc.wishlistapp.domain.model.UsernamePolicy
 import es.ulpgc.wishlistapp.domain.model.UserProfile
@@ -22,8 +23,6 @@ import kotlin.coroutines.resumeWithException
 private const val FRIEND_CODE_LENGTH = 8
 private const val MAX_FRIEND_CODE_ATTEMPTS = 10
 private const val FRIEND_CODE_CHARACTERS = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"
-private const val DEFAULT_AVATAR_ID = "person"
-
 class ProfileRepositoryImpl(
     private val firebaseAuth: FirebaseAuth,
     private val firestore: FirebaseFirestore
@@ -232,7 +231,7 @@ class ProfileRepositoryImpl(
         friendCode = friendCode,
         description = getString("description").orEmpty(),
         hobbies = getStringList("hobbies"),
-        avatarId = getString("avatarId") ?: DEFAULT_AVATAR_ID,
+        avatarId = getString("avatarId") ?: DEFAULT_PROFILE_AVATAR_ID,
         shirtSize = getString("shirtSize").orEmpty(),
         pantsSize = getString("pantsSize").orEmpty(),
         shoeSize = getString("shoeSize").orEmpty()

@@ -18,8 +18,16 @@ class FriendsViewModel(
     private val _state = MutableLiveData(FriendsState())
     val state: LiveData<FriendsState> = _state
 
+    init {
+        loadFriends()
+    }
+
     fun onEvent(event: FriendsEvent) {
         when (event) {
+            is FriendsEvent.SearchQueryChanged -> updateState {
+                it.copy(searchQuery = event.value)
+            }
+            FriendsEvent.RetryLoadingFriends -> loadFriends()
             FriendsEvent.AddFriendClicked -> showAddDialog()
             FriendsEvent.DismissAddDialog -> dismissAddDialog()
             FriendsEvent.ConfirmAddFriend -> addFriend()
@@ -45,6 +53,32 @@ class FriendsViewModel(
                 operationError = null,
                 successMessage = null
             )
+        }
+    }
+
+    private fun loadFriends() {
+        updateState {
+            it.copy(isLoadingFriends = true, friendsError = null)
+        }
+        viewModelScope.launch {
+            friendRepository.loadFriends()
+                .onSuccess { friends ->
+                    updateState {
+                        it.copy(
+                            friends = friends,
+                            isLoadingFriends = false,
+                            friendsError = null
+                        )
+                    }
+                }
+                .onFailure {
+                    updateState {
+                        it.copy(
+                            isLoadingFriends = false,
+                            friendsError = "No se pudo cargar la lista de amigos."
+                        )
+                    }
+                }
         }
     }
 
@@ -93,6 +127,7 @@ class FriendsViewModel(
                             successMessage = "Amigo añadido correctamente."
                         )
                     }
+                    loadFriends()
                 }
                 .onFailure { exception ->
                     updateState {

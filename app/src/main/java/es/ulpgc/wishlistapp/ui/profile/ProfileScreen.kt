@@ -4,8 +4,6 @@ import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Context
 import android.widget.Toast
-import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -18,21 +16,14 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.AccountCircle
 import androidx.compose.material.icons.filled.ArrowDropDown
 import androidx.compose.material.icons.filled.ContentCopy
-import androidx.compose.material.icons.filled.Face
-import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.MoreVert
-import androidx.compose.material.icons.filled.MusicNote
-import androidx.compose.material.icons.filled.Pets
 import androidx.compose.material.icons.filled.Refresh
-import androidx.compose.material.icons.filled.SportsSoccer
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
@@ -45,7 +36,6 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -56,9 +46,6 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.intl.Locale
 import androidx.compose.ui.text.intl.LocaleList
@@ -70,6 +57,10 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import es.ulpgc.wishlistapp.domain.model.EditableProfile
 import es.ulpgc.wishlistapp.domain.model.UserProfile
+import es.ulpgc.wishlistapp.ui.components.AvatarPickerItem
+import es.ulpgc.wishlistapp.ui.components.AvatarOption
+import es.ulpgc.wishlistapp.ui.components.ProfileAvatar
+import es.ulpgc.wishlistapp.ui.components.avatarOptions
 
 private val hobbies = listOf(
     "Leer",
@@ -91,21 +82,6 @@ private val hobbies = listOf(
 private val shirtSizes = listOf("XS", "S", "M", "L", "XL", "XXL")
 private val pantsSizes = (34..56 step 2).map(Int::toString)
 private val shoeSizes = (35..48).map(Int::toString)
-
-private data class AvatarOption(
-    val id: String,
-    val label: String,
-    val icon: ImageVector
-)
-
-private val avatarOptions = listOf(
-    AvatarOption("person", "Persona", Icons.Default.AccountCircle),
-    AvatarOption("face", "Cara", Icons.Default.Face),
-    AvatarOption("pets", "Mascota", Icons.Default.Pets),
-    AvatarOption("music", "Música", Icons.Default.MusicNote),
-    AvatarOption("sports", "Deporte", Icons.Default.SportsSoccer),
-    AvatarOption("favorite", "Favorito", Icons.Default.Favorite)
-)
 
 @Composable
 fun ProfileScreen(viewModel: ProfileViewModel) {
@@ -449,75 +425,6 @@ fun ProfileContent(
                 }
             }
         )
-    }
-}
-
-@Composable
-private fun ProfileAvatar(
-    avatarId: String,
-    modifier: Modifier = Modifier
-) {
-    val option = avatarOptions.firstOrNull { it.id == avatarId } ?: avatarOptions.first()
-    val colors = avatarColors(avatarId)
-
-    Surface(
-        modifier = modifier,
-        shape = CircleShape,
-        color = colors.first
-    ) {
-        Box(contentAlignment = Alignment.Center) {
-            Icon(
-                imageVector = option.icon,
-                contentDescription = option.label,
-                tint = colors.second,
-                modifier = Modifier.size(34.dp)
-            )
-        }
-    }
-}
-
-@Composable
-private fun AvatarPickerItem(
-    option: AvatarOption,
-    selected: Boolean,
-    onClick: () -> Unit
-) {
-    val colors = avatarColors(option.id)
-    Box(
-        modifier = Modifier
-            .padding(end = 8.dp)
-            .size(48.dp)
-            .clip(CircleShape)
-            .background(colors.first)
-            .then(
-                if (selected) {
-                    Modifier.border(2.dp, MaterialTheme.colorScheme.primary, CircleShape)
-                } else {
-                    Modifier
-                }
-            ),
-        contentAlignment = Alignment.Center
-    ) {
-        IconButton(onClick = onClick, modifier = Modifier.fillMaxSize()) {
-            Icon(
-                imageVector = option.icon,
-                contentDescription = option.label,
-                tint = colors.second
-            )
-        }
-    }
-}
-
-@Composable
-private fun avatarColors(avatarId: String): Pair<Color, Color> {
-    val scheme = MaterialTheme.colorScheme
-    return when (avatarId) {
-        "face" -> scheme.secondaryContainer to scheme.onSecondaryContainer
-        "pets" -> scheme.tertiaryContainer to scheme.onTertiaryContainer
-        "music" -> scheme.primaryContainer to scheme.onPrimaryContainer
-        "sports" -> scheme.secondaryContainer to scheme.onSecondaryContainer
-        "favorite" -> scheme.tertiaryContainer to scheme.onTertiaryContainer
-        else -> scheme.primaryContainer to scheme.onPrimaryContainer
     }
 }
 

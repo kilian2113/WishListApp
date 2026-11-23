@@ -8,3 +8,6 @@ class FriendAlreadyAddedException :
 
 class CannotAddYourselfException :
     Exception("No puedes añadirte a ti mismo como amigo.")
+
+class FriendProfileNotFoundException :
+    Exception("No se pudo encontrar el perfil de uno de tus amigos.")
