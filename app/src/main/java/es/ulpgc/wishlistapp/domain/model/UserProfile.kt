@@ -1,5 +1,7 @@
 package es.ulpgc.wishlistapp.domain.model
 
+const val DEFAULT_PROFILE_AVATAR_ID = "person"
+
 data class UserProfile(
     val uid: String,
     val username: String,

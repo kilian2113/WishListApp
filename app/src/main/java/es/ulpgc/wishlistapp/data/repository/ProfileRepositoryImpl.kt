@@ -7,10 +7,13 @@ import com.google.firebase.firestore.DocumentSnapshot
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.FirebaseFirestoreException
 import com.google.firebase.firestore.SetOptions
+import es.ulpgc.wishlistapp.domain.model.DEFAULT_PROFILE_AVATAR_ID
 import es.ulpgc.wishlistapp.domain.model.EditableProfile
 import es.ulpgc.wishlistapp.domain.model.UsernamePolicy
 import es.ulpgc.wishlistapp.domain.model.UserProfile
 import es.ulpgc.wishlistapp.domain.repository.BackendPermissionDeniedException
+import es.ulpgc.wishlistapp.domain.repository.FriendProfileNotFoundException
+import es.ulpgc.wishlistapp.domain.repository.FriendRelationshipNotFoundException
 import es.ulpgc.wishlistapp.domain.repository.ProfileRepository
 import es.ulpgc.wishlistapp.domain.repository.UsernameAlreadyTakenException
 import kotlinx.coroutines.CancellationException
@@ -22,8 +25,6 @@ import kotlin.coroutines.resumeWithException
 private const val FRIEND_CODE_LENGTH = 8
 private const val MAX_FRIEND_CODE_ATTEMPTS = 10
 private const val FRIEND_CODE_CHARACTERS = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"
-private const val DEFAULT_AVATAR_ID = "person"
-
 class ProfileRepositoryImpl(
     private val firebaseAuth: FirebaseAuth,
     private val firestore: FirebaseFirestore
@@ -52,7 +53,11 @@ class ProfileRepositoryImpl(
                         currentCodeDocument?.getString("uid") == firebaseUser.uid
                     ) {
                         return@runTransaction ProfileInitializationResult.Loaded(
-                            userDocument.toUserProfile(firebaseUser, currentCode)
+                            userDocument.toUserProfile(
+                                uid = firebaseUser.uid,
+                                fallbackName = firebaseUser.displayName.orEmpty(),
+                                friendCode = currentCode
+                            )
                         )
                     }
 
@@ -87,7 +92,11 @@ class ProfileRepositoryImpl(
                     )
 
                     ProfileInitializationResult.Loaded(
-                        userDocument.toUserProfile(firebaseUser, candidateCode)
+                        userDocument.toUserProfile(
+                            uid = firebaseUser.uid,
+                            fallbackName = firebaseUser.displayName.orEmpty(),
+                            friendCode = candidateCode
+                        )
                     )
                 }.await()) {
                     is ProfileInitializationResult.Loaded -> return Result.success(result.profile)
@@ -101,6 +110,46 @@ class ProfileRepositoryImpl(
         }
 
         return Result.failure(IllegalStateException("No se pudo generar un código de amigo único."))
+    }
+
+    override suspend fun loadFriendProfile(friendUid: String): Result<UserProfile> {
+        val currentUid = firebaseAuth.currentUser?.uid
+            ?: return Result.failure(IllegalStateException("No hay una sesión iniciada."))
+        if (friendUid.isBlank() || friendUid == currentUid) {
+            return Result.failure(IllegalArgumentException("El identificador del perfil no es válido."))
+        }
+
+        return try {
+            val friendship = firestore.collection("users")
+                .document(currentUid)
+                .collection("friends")
+                .document(friendUid)
+                .get()
+                .await()
+            if (!friendship.exists()) {
+                return Result.failure(FriendRelationshipNotFoundException())
+            }
+
+            val profileDocument = firestore.collection("users")
+                .document(friendUid)
+                .get()
+                .await()
+
+            if (!profileDocument.exists()) {
+                Result.failure(FriendProfileNotFoundException())
+            } else {
+                Result.success(
+                    profileDocument.toUserProfile(
+                        uid = friendUid,
+                        friendCode = profileDocument.getString("friendCode").orEmpty()
+                    )
+                )
+            }
+        } catch (exception: CancellationException) {
+            throw exception
+        } catch (exception: Exception) {
+            Result.failure(exception)
+        }
     }
 
     override suspend fun updateOwnProfile(profile: EditableProfile): Result<Unit> {
@@ -223,16 +272,17 @@ class ProfileRepositoryImpl(
     }
 
     private fun DocumentSnapshot.toUserProfile(
-        firebaseUser: com.google.firebase.auth.FirebaseUser,
-        friendCode: String
+        uid: String,
+        fallbackName: String = "",
+        friendCode: String = ""
     ) = UserProfile(
-        uid = firebaseUser.uid,
+        uid = uid,
         username = getString("username").orEmpty(),
-        name = getString("name") ?: firebaseUser.displayName.orEmpty(),
+        name = getString("name") ?: fallbackName,
         friendCode = friendCode,
         description = getString("description").orEmpty(),
         hobbies = getStringList("hobbies"),
-        avatarId = getString("avatarId") ?: DEFAULT_AVATAR_ID,
+        avatarId = getString("avatarId") ?: DEFAULT_PROFILE_AVATAR_ID,
         shirtSize = getString("shirtSize").orEmpty(),
         pantsSize = getString("pantsSize").orEmpty(),
         shoeSize = getString("shoeSize").orEmpty()
