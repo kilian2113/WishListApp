@@ -1,5 +1,6 @@
 package es.ulpgc.wishlistapp.ui.navigation
 
+import android.net.Uri
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -28,6 +29,8 @@ import es.ulpgc.wishlistapp.ui.friends.FriendsScreen
 import es.ulpgc.wishlistapp.ui.friends.FriendsViewModel
 import es.ulpgc.wishlistapp.ui.login.LoginScreen
 import es.ulpgc.wishlistapp.ui.login.LoginViewModel
+import es.ulpgc.wishlistapp.ui.profile.FriendProfileScreen
+import es.ulpgc.wishlistapp.ui.profile.FriendProfileViewModel
 import es.ulpgc.wishlistapp.ui.profile.ProfileScreen
 import es.ulpgc.wishlistapp.ui.profile.ProfileViewModel
 import es.ulpgc.wishlistapp.ui.register.RegisterScreen
@@ -43,6 +46,9 @@ sealed class Screen(val route: String) {
     data object MyLists : Screen("my_lists")
     data object Friends : Screen("friends")
     data object Profile : Screen("profile")
+    data object FriendProfile : Screen("friend_profile/{friendUid}") {
+        fun createRoute(friendUid: String) = "friend_profile/${Uri.encode(friendUid)}"
+    }
 }
 
 @Composable
@@ -56,7 +62,8 @@ fun NavGraph(
         Screen.Home.route,
         Screen.MyLists.route,
         Screen.Friends.route,
-        Screen.Profile.route
+        Screen.Profile.route,
+        Screen.FriendProfile.route
     )
 
     Scaffold(
@@ -64,7 +71,11 @@ fun NavGraph(
         bottomBar = {
             if (currentRoute in mainRoutes) {
                 BottomNavigationMenu(
-                    selectedRoute = currentRoute,
+                    selectedRoute = if (currentRoute == Screen.FriendProfile.route) {
+                        Screen.Friends.route
+                    } else {
+                        currentRoute
+                    },
                     onDestinationSelected = { route ->
                         if (route != currentRoute) {
                             val destinationRoute = if (route == Screen.Home.route) {
@@ -156,12 +167,31 @@ fun NavGraph(
 
             composable(Screen.Friends.route) {
                 val friendsViewModel: FriendsViewModel = koinViewModel()
-                FriendsScreen(viewModel = friendsViewModel)
+                FriendsScreen(
+                    viewModel = friendsViewModel,
+                    onFriendClick = { friendUid ->
+                        navController.navigate(Screen.FriendProfile.createRoute(friendUid))
+                    }
+                )
             }
 
             composable(Screen.Profile.route) {
                 val profileViewModel: ProfileViewModel = koinViewModel()
                 ProfileScreen(viewModel = profileViewModel)
+            }
+
+            composable(
+                route = Screen.FriendProfile.route,
+                arguments = listOf(navArgument("friendUid") { type = NavType.StringType })
+            ) { friendProfileEntry ->
+                val friendUid = requireNotNull(
+                    friendProfileEntry.arguments?.getString("friendUid")
+                )
+                val friendProfileViewModel: FriendProfileViewModel = koinViewModel()
+                FriendProfileScreen(
+                    friendUid = friendUid,
+                    viewModel = friendProfileViewModel
+                )
             }
         }
     }

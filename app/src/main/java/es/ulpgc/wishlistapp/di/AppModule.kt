@@ -10,6 +10,7 @@ import es.ulpgc.wishlistapp.domain.repository.FriendRepository
 import es.ulpgc.wishlistapp.domain.repository.ProfileRepository
 import es.ulpgc.wishlistapp.ui.friends.FriendsViewModel
 import es.ulpgc.wishlistapp.ui.login.LoginViewModel
+import es.ulpgc.wishlistapp.ui.profile.FriendProfileViewModel
 import es.ulpgc.wishlistapp.ui.profile.ProfileViewModel
 import es.ulpgc.wishlistapp.ui.register.RegisterViewModel
 import org.koin.core.module.dsl.viewModel
@@ -24,5 +25,6 @@ val appModule = module {
     viewModel { RegisterViewModel(get()) }
     viewModel { LoginViewModel(get()) }
     viewModel { FriendsViewModel(get()) }
+    viewModel { FriendProfileViewModel(get()) }
     viewModel { ProfileViewModel(get()) }
 }

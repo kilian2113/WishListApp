@@ -45,7 +45,10 @@ import androidx.compose.ui.unit.dp
 import es.ulpgc.wishlistapp.ui.components.ProfileAvatar
 
 @Composable
-fun FriendsScreen(viewModel: FriendsViewModel) {
+fun FriendsScreen(
+    viewModel: FriendsViewModel,
+    onFriendClick: (String) -> Unit
+) {
     val state by viewModel.state.observeAsState(FriendsState())
     val snackbarHostState = remember { SnackbarHostState() }
     val friendsError = state.friendsError
@@ -129,7 +132,8 @@ fun FriendsScreen(viewModel: FriendsViewModel) {
                                 FriendRow(
                                     name = friend.name,
                                     username = friend.username,
-                                    avatarId = friend.avatarId
+                                    avatarId = friend.avatarId,
+                                    onClick = { onFriendClick(friend.uid) }
                                 )
                             }
                         }
@@ -216,9 +220,13 @@ fun FriendsScreen(viewModel: FriendsViewModel) {
 private fun FriendRow(
     name: String,
     username: String,
-    avatarId: String
+    avatarId: String,
+    onClick: () -> Unit
 ) {
-    Card(modifier = Modifier.fillMaxWidth()) {
+    Card(
+        onClick = onClick,
+        modifier = Modifier.fillMaxWidth()
+    ) {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
