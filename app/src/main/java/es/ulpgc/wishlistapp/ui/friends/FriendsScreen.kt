@@ -14,11 +14,9 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
@@ -43,6 +41,7 @@ import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import es.ulpgc.wishlistapp.ui.components.ProfileAvatar
+import es.ulpgc.wishlistapp.ui.components.SearchField
 
 @Composable
 fun FriendsScreen(
@@ -66,21 +65,11 @@ fun FriendsScreen(
                 .fillMaxSize()
                 .statusBarsPadding()
         ) {
-            OutlinedTextField(
-                value = state.searchQuery,
-                onValueChange = {
+            SearchField(
+                query = state.searchQuery,
+                onQueryChange = {
                     viewModel.onEvent(FriendsEvent.SearchQueryChanged(it))
-                },
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 16.dp, vertical = 4.dp)
-                    .height(52.dp),
-                label = { Text("Buscar amigo") },
-                leadingIcon = {
-                    Icon(Icons.Default.Search, contentDescription = null)
-                },
-                singleLine = true,
-                shape = RoundedCornerShape(24.dp)
+                }
             )
 
             Box(
