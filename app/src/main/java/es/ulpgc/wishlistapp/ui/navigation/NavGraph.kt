@@ -24,6 +24,8 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
+import es.ulpgc.wishlistapp.ui.friends.FriendsScreen
+import es.ulpgc.wishlistapp.ui.friends.FriendsViewModel
 import es.ulpgc.wishlistapp.ui.login.LoginScreen
 import es.ulpgc.wishlistapp.ui.login.LoginViewModel
 import es.ulpgc.wishlistapp.ui.profile.ProfileScreen
@@ -153,7 +155,8 @@ fun NavGraph(
             }
 
             composable(Screen.Friends.route) {
-                Box(modifier = Modifier.fillMaxSize())
+                val friendsViewModel: FriendsViewModel = koinViewModel()
+                FriendsScreen(viewModel = friendsViewModel)
             }
 
             composable(Screen.Profile.route) {
