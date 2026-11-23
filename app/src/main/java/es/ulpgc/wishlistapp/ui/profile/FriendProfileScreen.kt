@@ -24,10 +24,10 @@ fun FriendProfileScreen(
     friendUid: String,
     viewModel: FriendProfileViewModel
 ) {
-    val state by viewModel.state.observeAsState(ProfileState())
+    val state by viewModel.state.observeAsState(FriendProfileState())
 
     LaunchedEffect(friendUid) {
-        viewModel.loadProfile(friendUid)
+        viewModel.loadFriendProfile(friendUid)
     }
 
     when {
@@ -50,15 +50,13 @@ fun FriendProfileScreen(
                 color = MaterialTheme.colorScheme.error
             )
             Spacer(modifier = Modifier.height(12.dp))
-            Button(onClick = { viewModel.loadProfile(friendUid) }) {
+            Button(onClick = { viewModel.loadFriendProfile(friendUid) }) {
                 Text("Reintentar")
             }
         }
 
-        else -> ProfileContent(
-            state = state,
-            isOwnProfile = false,
-            onEvent = {}
-        )
+        else -> state.profile?.let { profile ->
+            FriendProfileContent(profile = profile)
+        }
     }
 }

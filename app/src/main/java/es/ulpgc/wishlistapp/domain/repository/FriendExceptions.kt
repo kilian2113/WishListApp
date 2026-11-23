@@ -11,3 +11,6 @@ class CannotAddYourselfException :
 
 class FriendProfileNotFoundException :
     Exception("No se pudo encontrar el perfil de uno de tus amigos.")
+
+class FriendRelationshipNotFoundException :
+    Exception("Este usuario ya no está en tu lista de amigos.")

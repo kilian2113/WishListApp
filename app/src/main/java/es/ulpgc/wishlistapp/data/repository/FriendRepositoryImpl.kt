@@ -2,7 +2,6 @@ package es.ulpgc.wishlistapp.data.repository
 
 import com.google.android.gms.tasks.Task
 import com.google.firebase.auth.FirebaseAuth
-import com.google.firebase.firestore.FieldPath
 import com.google.firebase.firestore.FieldValue
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.Query
@@ -15,6 +14,9 @@ import es.ulpgc.wishlistapp.domain.repository.FriendCodeNotFoundException
 import es.ulpgc.wishlistapp.domain.repository.FriendProfileNotFoundException
 import es.ulpgc.wishlistapp.domain.repository.FriendRepository
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlin.coroutines.resume
 import kotlin.coroutines.resumeWithException
@@ -47,12 +49,18 @@ class FriendRepositoryImpl(
             val friendProfiles = friendUids
                 .chunked(MAX_PROFILE_LOOKUP_IDS)
                 .flatMap { uids ->
-                    firestore.collection("users")
-                        .whereIn(FieldPath.documentId(), uids)
-                        .get()
-                        .await()
-                        .documents
+                    coroutineScope {
+                        uids.map { friendUid ->
+                            async {
+                                firestore.collection("users")
+                                    .document(friendUid)
+                                    .get()
+                                    .await()
+                            }
+                        }.awaitAll()
+                    }
                 }
+                .filter { it.exists() }
                 .associateBy { it.id }
 
             Result.success(

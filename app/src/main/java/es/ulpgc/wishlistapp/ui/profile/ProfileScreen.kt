@@ -114,21 +114,56 @@ fun ProfileScreen(viewModel: ProfileViewModel) {
 
         else -> ProfileContent(
             state = state,
-            isOwnProfile = true,
             onEvent = viewModel::onEvent
         )
     }
 }
 
 @Composable
+fun FriendProfileContent(
+    profile: UserProfile,
+    modifier: Modifier = Modifier
+) {
+    Column(
+        modifier = modifier
+            .fillMaxSize()
+            .padding(start = 20.dp, top = 32.dp, end = 20.dp, bottom = 16.dp)
+            .verticalScroll(rememberScrollState()),
+        verticalArrangement = Arrangement.spacedBy(22.dp)
+    ) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            ProfileAvatar(
+                avatarId = profile.avatarId,
+                modifier = Modifier.size(64.dp)
+            )
+            Column(
+                modifier = Modifier
+                    .weight(1f)
+                    .padding(start = 12.dp),
+                verticalArrangement = Arrangement.spacedBy(6.dp)
+            ) {
+                ProfileIdentityText(
+                    username = profile.username,
+                    name = profile.name
+                )
+            }
+        }
+
+        ProfileReadOnlyDetails(profile)
+    }
+}
+
+@Composable
 fun ProfileContent(
     state: ProfileState,
-    isOwnProfile: Boolean,
     onEvent: (ProfileEvent) -> Unit,
     modifier: Modifier = Modifier
 ) {
     val profile = state.profile ?: return
-    val isEditing = isOwnProfile && state.isEditing
+    val isEditing = state.isEditing
     val displayedProfile = if (isEditing) {
         state.draft ?: profile.toEditableProfile()
     } else {
@@ -183,56 +218,46 @@ fun ProfileContent(
                         modifier = Modifier.fillMaxWidth()
                     )
                 } else {
-                    Text(
-                        text = displayedProfile.username.takeIf(String::isNotBlank)?.let { "@$it" }
-                            ?: "Usuario",
-                        style = MaterialTheme.typography.titleLarge,
-                        fontWeight = FontWeight.Bold,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis
-                    )
-                    Text(
-                        text = displayedProfile.name.ifBlank { "Nombre" },
-                        style = MaterialTheme.typography.bodyLarge
+                    ProfileIdentityText(
+                        username = displayedProfile.username,
+                        name = displayedProfile.name
                     )
                 }
             }
 
-            if (isOwnProfile) {
-                Box {
-                    IconButton(onClick = { menuExpanded = true }) {
-                        Icon(Icons.Default.MoreVert, contentDescription = "Opciones del perfil")
-                    }
-                    DropdownMenu(
-                        expanded = menuExpanded,
-                        onDismissRequest = { menuExpanded = false }
-                    ) {
-                        if (isEditing) {
-                            DropdownMenuItem(
-                                text = { Text("Guardar cambios") },
-                                enabled = !state.isSaving,
-                                onClick = {
-                                    menuExpanded = false
-                                    onEvent(ProfileEvent.SaveChanges)
-                                }
-                            )
-                            DropdownMenuItem(
-                                text = { Text("Cancelar edición") },
-                                enabled = !state.isSaving,
-                                onClick = {
-                                    menuExpanded = false
-                                    onEvent(ProfileEvent.CancelEditing)
-                                }
-                            )
-                        } else {
-                            DropdownMenuItem(
-                                text = { Text("Editar perfil") },
-                                onClick = {
-                                    menuExpanded = false
-                                    onEvent(ProfileEvent.StartEditing)
-                                }
-                            )
-                        }
+            Box {
+                IconButton(onClick = { menuExpanded = true }) {
+                    Icon(Icons.Default.MoreVert, contentDescription = "Opciones del perfil")
+                }
+                DropdownMenu(
+                    expanded = menuExpanded,
+                    onDismissRequest = { menuExpanded = false }
+                ) {
+                    if (isEditing) {
+                        DropdownMenuItem(
+                            text = { Text("Guardar cambios") },
+                            enabled = !state.isSaving,
+                            onClick = {
+                                menuExpanded = false
+                                onEvent(ProfileEvent.SaveChanges)
+                            }
+                        )
+                        DropdownMenuItem(
+                            text = { Text("Cancelar edición") },
+                            enabled = !state.isSaving,
+                            onClick = {
+                                menuExpanded = false
+                                onEvent(ProfileEvent.CancelEditing)
+                            }
+                        )
+                    } else {
+                        DropdownMenuItem(
+                            text = { Text("Editar perfil") },
+                            onClick = {
+                                menuExpanded = false
+                                onEvent(ProfileEvent.StartEditing)
+                            }
+                        )
                     }
                 }
             }
@@ -256,112 +281,63 @@ fun ProfileContent(
             }
         }
 
-        if (isOwnProfile) {
-            ProfileSection(title = "Código de amigo", contentSpacing = 4.dp) {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    verticalAlignment = Alignment.CenterVertically
+        ProfileSection(title = "Código de amigo", contentSpacing = 4.dp) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = profile.friendCode,
+                    style = MaterialTheme.typography.titleMedium,
+                    modifier = Modifier.weight(1f)
+                )
+                IconButton(
+                    onClick = {
+                        val clipboardManager = context.getSystemService(
+                            Context.CLIPBOARD_SERVICE
+                        ) as ClipboardManager
+                        clipboardManager.setPrimaryClip(
+                            ClipData.newPlainText("Código de amigo", profile.friendCode)
+                        )
+                        Toast.makeText(context, "Código copiado", Toast.LENGTH_SHORT).show()
+                    }
                 ) {
-                    Text(
-                        text = profile.friendCode,
-                        style = MaterialTheme.typography.titleMedium,
-                        modifier = Modifier.weight(1f)
+                    Icon(
+                        imageVector = Icons.Default.ContentCopy,
+                        contentDescription = "Copiar código de amigo"
                     )
-                    IconButton(
-                        onClick = {
-                            val clipboardManager = context.getSystemService(
-                                Context.CLIPBOARD_SERVICE
-                            ) as ClipboardManager
-                            clipboardManager.setPrimaryClip(
-                                ClipData.newPlainText("Código de amigo", profile.friendCode)
-                            )
-                            Toast.makeText(context, "Código copiado", Toast.LENGTH_SHORT).show()
-                        }
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.ContentCopy,
-                            contentDescription = "Copiar código de amigo"
-                        )
-                    }
-                    IconButton(
-                        onClick = { showRegenerateConfirmation = true },
-                        enabled = !state.isRegeneratingFriendCode && !isEditing
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.Refresh,
-                            contentDescription = "Regenerar código de amigo"
-                        )
-                    }
-                    if (state.isRegeneratingFriendCode) {
-                        CircularProgressIndicator(
-                            modifier = Modifier.size(22.dp),
-                            strokeWidth = 2.dp
-                        )
-                    }
                 }
-                Text(
-                    text = "Comparte este código para que puedan agregarte.",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
+                IconButton(
+                    onClick = { showRegenerateConfirmation = true },
+                    enabled = !state.isRegeneratingFriendCode && !isEditing
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Refresh,
+                        contentDescription = "Regenerar código de amigo"
+                    )
+                }
+                if (state.isRegeneratingFriendCode) {
+                    CircularProgressIndicator(
+                        modifier = Modifier.size(22.dp),
+                        strokeWidth = 2.dp
+                    )
+                }
             }
-            HorizontalDivider()
-        }
-
-        ProfileSection(title = "Descripción") {
-            if (isEditing) {
-                OutlinedTextField(
-                    value = displayedProfile.description,
-                    onValueChange = { onEvent(ProfileEvent.DescriptionChanged(it)) },
-                    placeholder = { Text("Cuéntales algo sobre ti") },
-                    keyboardOptions = KeyboardOptions(
-                        capitalization = KeyboardCapitalization.Sentences,
-                        keyboardType = KeyboardType.Text,
-                        hintLocales = LocaleList(Locale("es"))
-                    ),
-                    minLines = 3,
-                    maxLines = 6,
-                    modifier = Modifier.fillMaxWidth()
-                )
-            } else {
-                Text(
-                    text = displayedProfile.description.ifBlank { "Sin descripción." },
-                    style = MaterialTheme.typography.bodyLarge
-                )
-            }
-        }
-
-        ProfileSection(title = "Aficiones") {
-            ProfileTagSection(
-                options = hobbies,
-                selectedOptions = displayedProfile.hobbies,
-                enabled = isEditing,
-                onToggle = { onEvent(ProfileEvent.HobbyToggled(it)) }
+            Text(
+                text = "Comparte este código para que puedan agregarte.",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
             )
         }
+        HorizontalDivider()
 
-        ProfileSection(title = "Tallas") {
-            ProfileSizeField(
-                label = "Camiseta",
-                value = displayedProfile.shirtSize,
-                options = shirtSizes,
-                enabled = isEditing,
-                onValueSelected = { onEvent(ProfileEvent.ShirtSizeChanged(it)) }
+        if (isEditing) {
+            EditableProfileDetails(
+                profile = displayedProfile,
+                onEvent = onEvent
             )
-            ProfileSizeField(
-                label = "Pantalones (EU)",
-                value = displayedProfile.pantsSize,
-                options = pantsSizes,
-                enabled = isEditing,
-                onValueSelected = { onEvent(ProfileEvent.PantsSizeChanged(it)) }
-            )
-            ProfileSizeField(
-                label = "Zapatos (EU)",
-                value = displayedProfile.shoeSize,
-                options = shoeSizes,
-                enabled = isEditing,
-                onValueSelected = { onEvent(ProfileEvent.ShoeSizeChanged(it)) }
-            )
+        } else {
+            ProfileReadOnlyDetails(profile)
         }
 
         state.error?.let { error ->
@@ -402,7 +378,7 @@ fun ProfileContent(
         }
     }
 
-    if (showRegenerateConfirmation && isOwnProfile) {
+    if (showRegenerateConfirmation) {
         AlertDialog(
             onDismissRequest = { showRegenerateConfirmation = false },
             title = { Text("Regenerar código") },
@@ -426,6 +402,122 @@ fun ProfileContent(
             }
         )
     }
+}
+
+@Composable
+private fun EditableProfileDetails(
+    profile: EditableProfile,
+    onEvent: (ProfileEvent) -> Unit
+) {
+    ProfileSection(title = "Descripción") {
+        OutlinedTextField(
+            value = profile.description,
+            onValueChange = { onEvent(ProfileEvent.DescriptionChanged(it)) },
+            placeholder = { Text("Cuéntales algo sobre ti") },
+            keyboardOptions = KeyboardOptions(
+                capitalization = KeyboardCapitalization.Sentences,
+                keyboardType = KeyboardType.Text,
+                hintLocales = LocaleList(Locale("es"))
+            ),
+            minLines = 3,
+            maxLines = 6,
+            modifier = Modifier.fillMaxWidth()
+        )
+    }
+
+    ProfileSection(title = "Aficiones") {
+        ProfileTagSection(
+            options = hobbies,
+            selectedOptions = profile.hobbies,
+            enabled = true,
+            onToggle = { onEvent(ProfileEvent.HobbyToggled(it)) }
+        )
+    }
+
+    ProfileSection(title = "Tallas") {
+        ProfileSizeField(
+            label = "Camiseta",
+            value = profile.shirtSize,
+            options = shirtSizes,
+            enabled = true,
+            onValueSelected = { onEvent(ProfileEvent.ShirtSizeChanged(it)) }
+        )
+        ProfileSizeField(
+            label = "Pantalones (EU)",
+            value = profile.pantsSize,
+            options = pantsSizes,
+            enabled = true,
+            onValueSelected = { onEvent(ProfileEvent.PantsSizeChanged(it)) }
+        )
+        ProfileSizeField(
+            label = "Zapatos (EU)",
+            value = profile.shoeSize,
+            options = shoeSizes,
+            enabled = true,
+            onValueSelected = { onEvent(ProfileEvent.ShoeSizeChanged(it)) }
+        )
+    }
+}
+
+@Composable
+private fun ProfileReadOnlyDetails(profile: UserProfile) {
+    ProfileSection(title = "Descripción") {
+        Text(
+            text = profile.description.ifBlank { "Sin descripción." },
+            style = MaterialTheme.typography.bodyLarge
+        )
+    }
+
+    ProfileSection(title = "Aficiones") {
+        ProfileTagSection(
+            options = hobbies,
+            selectedOptions = profile.hobbies,
+            enabled = false,
+            onToggle = {}
+        )
+    }
+
+    ProfileSection(title = "Tallas") {
+        ProfileSizeField(
+            label = "Camiseta",
+            value = profile.shirtSize,
+            options = shirtSizes,
+            enabled = false,
+            onValueSelected = {}
+        )
+        ProfileSizeField(
+            label = "Pantalones (EU)",
+            value = profile.pantsSize,
+            options = pantsSizes,
+            enabled = false,
+            onValueSelected = {}
+        )
+        ProfileSizeField(
+            label = "Zapatos (EU)",
+            value = profile.shoeSize,
+            options = shoeSizes,
+            enabled = false,
+            onValueSelected = {}
+        )
+    }
+}
+
+@Composable
+private fun ProfileIdentityText(
+    username: String,
+    name: String
+) {
+    Text(
+        text = username.takeIf(String::isNotBlank)?.let { "@$it" } ?: "Usuario",
+        style = MaterialTheme.typography.titleLarge,
+        fontWeight = FontWeight.Bold,
+        maxLines = 1,
+        overflow = TextOverflow.Ellipsis
+    )
+    Text(
+        text = name.ifBlank { "Nombre" },
+        style = MaterialTheme.typography.bodyLarge
+    )
 }
 
 @Composable

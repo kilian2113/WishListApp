@@ -12,23 +12,23 @@ class FriendProfileViewModel(
     private val profileRepository: ProfileRepository
 ) : ViewModel() {
 
-    private val _state = MutableLiveData(ProfileState())
-    val state: LiveData<ProfileState> = _state
+    private val _state = MutableLiveData(FriendProfileState())
+    val state: LiveData<FriendProfileState> = _state
     private var loadJob: Job? = null
 
-    fun loadProfile(uid: String) {
+    fun loadFriendProfile(uid: String) {
         loadJob?.cancel()
-        _state.value = ProfileState(isLoading = true)
+        _state.value = FriendProfileState(isLoading = true)
         loadJob = viewModelScope.launch {
-            profileRepository.loadProfile(uid)
+            profileRepository.loadFriendProfile(uid)
                 .onSuccess { profile ->
-                    _state.value = ProfileState(
+                    _state.value = FriendProfileState(
                         profile = profile,
                         isLoading = false
                     )
                 }
                 .onFailure { exception ->
-                    _state.value = ProfileState(
+                    _state.value = FriendProfileState(
                         isLoading = false,
                         error = exception.localizedMessage
                             ?: "No se pudo cargar el perfil del amigo."

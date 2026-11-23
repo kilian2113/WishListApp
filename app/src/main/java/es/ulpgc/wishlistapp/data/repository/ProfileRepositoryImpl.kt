@@ -12,6 +12,8 @@ import es.ulpgc.wishlistapp.domain.model.EditableProfile
 import es.ulpgc.wishlistapp.domain.model.UsernamePolicy
 import es.ulpgc.wishlistapp.domain.model.UserProfile
 import es.ulpgc.wishlistapp.domain.repository.BackendPermissionDeniedException
+import es.ulpgc.wishlistapp.domain.repository.FriendProfileNotFoundException
+import es.ulpgc.wishlistapp.domain.repository.FriendRelationshipNotFoundException
 import es.ulpgc.wishlistapp.domain.repository.ProfileRepository
 import es.ulpgc.wishlistapp.domain.repository.UsernameAlreadyTakenException
 import kotlinx.coroutines.CancellationException
@@ -110,26 +112,35 @@ class ProfileRepositoryImpl(
         return Result.failure(IllegalStateException("No se pudo generar un código de amigo único."))
     }
 
-    override suspend fun loadProfile(uid: String): Result<UserProfile> {
-        if (firebaseAuth.currentUser == null) {
-            return Result.failure(IllegalStateException("No hay una sesión iniciada."))
-        }
-        if (uid.isBlank()) {
+    override suspend fun loadFriendProfile(friendUid: String): Result<UserProfile> {
+        val currentUid = firebaseAuth.currentUser?.uid
+            ?: return Result.failure(IllegalStateException("No hay una sesión iniciada."))
+        if (friendUid.isBlank() || friendUid == currentUid) {
             return Result.failure(IllegalArgumentException("El identificador del perfil no es válido."))
         }
 
         return try {
+            val friendship = firestore.collection("users")
+                .document(currentUid)
+                .collection("friends")
+                .document(friendUid)
+                .get()
+                .await()
+            if (!friendship.exists()) {
+                return Result.failure(FriendRelationshipNotFoundException())
+            }
+
             val profileDocument = firestore.collection("users")
-                .document(uid)
+                .document(friendUid)
                 .get()
                 .await()
 
             if (!profileDocument.exists()) {
-                Result.failure(IllegalStateException("No se encontró el perfil del amigo."))
+                Result.failure(FriendProfileNotFoundException())
             } else {
                 Result.success(
                     profileDocument.toUserProfile(
-                        uid = uid,
+                        uid = friendUid,
                         friendCode = profileDocument.getString("friendCode").orEmpty()
                     )
                 )
