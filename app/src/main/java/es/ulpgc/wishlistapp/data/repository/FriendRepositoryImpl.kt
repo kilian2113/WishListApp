@@ -128,6 +128,28 @@ class FriendRepositoryImpl(
         }
     }
 
+    override suspend fun removeFriend(friendUid: String): Result<Unit> {
+        val currentUid = firebaseAuth.currentUser?.uid
+            ?: return Result.failure(IllegalStateException("No hay una sesión iniciada."))
+        if (friendUid.isBlank() || friendUid == currentUid) {
+            return Result.failure(IllegalArgumentException("El identificador del amigo no es válido."))
+        }
+
+        return try {
+            firestore.collection("users")
+                .document(currentUid)
+                .collection("friends")
+                .document(friendUid)
+                .delete()
+                .await()
+            Result.success(Unit)
+        } catch (exception: CancellationException) {
+            throw exception
+        } catch (exception: Exception) {
+            Result.failure(exception)
+        }
+    }
+
     private suspend fun <T> Task<T>.await(): T =
         suspendCancellableCoroutine { continuation ->
             addOnCompleteListener { task ->

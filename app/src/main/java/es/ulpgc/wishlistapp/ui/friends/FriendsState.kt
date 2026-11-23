@@ -13,7 +13,10 @@ data class FriendsState(
     val friendCodeError: String? = null,
     val operationError: String? = null,
     val successMessage: String? = null,
-    val isAddingFriend: Boolean = false
+    val isAddingFriend: Boolean = false,
+    val friendToRemove: Friend? = null,
+    val isRemovingFriend: Boolean = false,
+    val removeFriendError: String? = null
 ) {
     val filteredFriends: List<Friend>
         get() {
@@ -37,4 +40,7 @@ sealed interface FriendsEvent {
     data object ConfirmAddFriend : FriendsEvent
     data object SuccessMessageShown : FriendsEvent
     data class FriendCodeChanged(val value: String) : FriendsEvent
+    data class RemoveFriendClicked(val friend: Friend) : FriendsEvent
+    data object DismissRemoveFriendDialog : FriendsEvent
+    data object ConfirmRemoveFriend : FriendsEvent
 }

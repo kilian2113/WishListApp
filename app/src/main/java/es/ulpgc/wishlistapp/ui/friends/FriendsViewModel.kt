@@ -41,6 +41,17 @@ class FriendsViewModel(
                     operationError = null
                 )
             }
+            is FriendsEvent.RemoveFriendClicked -> updateState {
+                it.copy(friendToRemove = event.friend, removeFriendError = null)
+            }
+            FriendsEvent.DismissRemoveFriendDialog -> updateState {
+                if (it.isRemovingFriend) {
+                    it
+                } else {
+                    it.copy(friendToRemove = null, removeFriendError = null)
+                }
+            }
+            FriendsEvent.ConfirmRemoveFriend -> removeFriend()
         }
     }
 
@@ -145,6 +156,37 @@ class FriendsViewModel(
                             } else {
                                 null
                             }
+                        )
+                    }
+                }
+        }
+    }
+
+    private fun removeFriend() {
+        val friend = _state.value?.friendToRemove ?: return
+        updateState {
+            it.copy(isRemovingFriend = true, removeFriendError = null)
+        }
+        viewModelScope.launch {
+            friendRepository.removeFriend(friend.uid)
+                .onSuccess {
+                    updateState {
+                        it.copy(
+                            friends = it.friends.filterNot { currentFriend ->
+                                currentFriend.uid == friend.uid
+                            },
+                            friendToRemove = null,
+                            isRemovingFriend = false,
+                            removeFriendError = null,
+                            successMessage = "Amigo eliminado correctamente."
+                        )
+                    }
+                }
+                .onFailure {
+                    updateState {
+                        it.copy(
+                            isRemovingFriend = false,
+                            removeFriendError = "No se pudo eliminar a ${friend.name}. Inténtalo de nuevo."
                         )
                     }
                 }

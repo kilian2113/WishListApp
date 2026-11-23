@@ -17,12 +17,14 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.SnackbarHost
@@ -122,7 +124,12 @@ fun FriendsScreen(
                                     name = friend.name,
                                     username = friend.username,
                                     avatarId = friend.avatarId,
-                                    onClick = { onFriendClick(friend.uid) }
+                                    onClick = { onFriendClick(friend.uid) },
+                                    onRemoveClick = {
+                                        viewModel.onEvent(
+                                            FriendsEvent.RemoveFriendClicked(friend)
+                                        )
+                                    }
                                 )
                             }
                         }
@@ -203,6 +210,48 @@ fun FriendsScreen(
             }
         )
     }
+
+    state.friendToRemove?.let { friend ->
+        AlertDialog(
+            onDismissRequest = {
+                viewModel.onEvent(FriendsEvent.DismissRemoveFriendDialog)
+            },
+            title = { Text("Eliminar amigo") },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text("¿Seguro que quieres eliminar a ${friend.name} de tu lista de amigos?")
+                    state.removeFriendError?.let { error ->
+                        Text(
+                            text = error,
+                            color = MaterialTheme.colorScheme.error
+                        )
+                    }
+                }
+            },
+            confirmButton = {
+                Button(
+                    onClick = { viewModel.onEvent(FriendsEvent.ConfirmRemoveFriend) },
+                    enabled = !state.isRemovingFriend
+                ) {
+                    if (state.isRemovingFriend) {
+                        CircularProgressIndicator()
+                    } else {
+                        Text("Eliminar")
+                    }
+                }
+            },
+            dismissButton = {
+                TextButton(
+                    onClick = {
+                        viewModel.onEvent(FriendsEvent.DismissRemoveFriendDialog)
+                    },
+                    enabled = !state.isRemovingFriend
+                ) {
+                    Text("Cancelar")
+                }
+            }
+        )
+    }
 }
 
 @Composable
@@ -210,7 +259,8 @@ private fun FriendRow(
     name: String,
     username: String,
     avatarId: String,
-    onClick: () -> Unit
+    onClick: () -> Unit,
+    onRemoveClick: () -> Unit
 ) {
     Card(
         onClick = onClick,
@@ -227,7 +277,7 @@ private fun FriendRow(
                 modifier = Modifier.size(40.dp)
             )
             Spacer(modifier = Modifier.size(12.dp))
-            Column {
+            Column(modifier = Modifier.weight(1f)) {
                 Text(
                     text = name,
                     style = MaterialTheme.typography.titleMedium
@@ -240,6 +290,12 @@ private fun FriendRow(
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
+            }
+            IconButton(onClick = onRemoveClick) {
+                Icon(
+                    imageVector = Icons.Default.Delete,
+                    contentDescription = "Eliminar a $name"
+                )
             }
         }
     }
