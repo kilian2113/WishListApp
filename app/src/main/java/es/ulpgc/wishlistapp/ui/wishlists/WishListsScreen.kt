@@ -18,7 +18,6 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.CardGiftcard
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
@@ -173,9 +172,7 @@ fun WishListsScreen(
                         label = { Text("Nombre de la lista") },
                         singleLine = true,
                         isError = state.newListNameError != null,
-                        supportingText = state.newListNameError?.let { error ->
-                            { Text(error) }
-                        },
+                        supportingText = if (state.newListNameError != null) { { Text(state.newListNameError!!) } } else null,
                         shape = RoundedCornerShape(12.dp),
                         keyboardOptions = KeyboardOptions(
                             capitalization = KeyboardCapitalization.Sentences,
@@ -298,13 +295,6 @@ private fun WishListRow(
                 .padding(horizontal = 16.dp, vertical = 12.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Icon(
-                imageVector = Icons.Default.CardGiftcard,
-                contentDescription = null,
-                tint = MaterialTheme.colorScheme.primary,
-                modifier = Modifier.size(40.dp)
-            )
-            Spacer(modifier = Modifier.size(12.dp))
             Column(modifier = Modifier.weight(1f)) {
                 Text(
                     text = name,

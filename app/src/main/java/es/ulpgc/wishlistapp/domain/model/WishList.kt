@@ -6,5 +6,6 @@ data class WishList(
     val name: String = "",
     val description: String = "",
     val itemCount: Int = 0,
+    val eventDate: String = "",
     val createdAt: Long = System.currentTimeMillis()
 )

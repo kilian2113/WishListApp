@@ -34,6 +34,8 @@ import es.ulpgc.wishlistapp.ui.profile.ProfileScreen
 import es.ulpgc.wishlistapp.ui.profile.ProfileViewModel
 import es.ulpgc.wishlistapp.ui.register.RegisterScreen
 import es.ulpgc.wishlistapp.ui.register.RegisterViewModel
+import es.ulpgc.wishlistapp.ui.wishlistdetail.WishListDetailScreen
+import es.ulpgc.wishlistapp.ui.wishlistdetail.WishListDetailViewModel
 import es.ulpgc.wishlistapp.ui.wishlists.WishListsScreen
 import es.ulpgc.wishlistapp.ui.wishlists.WishListsViewModel
 import org.koin.androidx.compose.koinViewModel
@@ -50,6 +52,9 @@ sealed class Screen(val route: String) {
     data object FriendProfile : Screen("friend_profile/{friendUid}") {
         fun createRoute(friendUid: String) = "friend_profile/${Uri.encode(friendUid)}"
     }
+    data object WishListDetail : Screen("wishlist_detail/{listId}") {
+        fun createRoute(listId: String) = "wishlist_detail/${Uri.encode(listId)}"
+    }
 }
 
 @Composable
@@ -64,7 +69,8 @@ fun NavGraph(
         Screen.MyLists.route,
         Screen.Friends.route,
         Screen.Profile.route,
-        Screen.FriendProfile.route
+        Screen.FriendProfile.route,
+        Screen.WishListDetail.route
     )
 
     Scaffold(
@@ -72,10 +78,10 @@ fun NavGraph(
         bottomBar = {
             if (currentRoute in mainRoutes) {
                 BottomNavigationMenu(
-                    selectedRoute = if (currentRoute == Screen.FriendProfile.route) {
-                        Screen.Friends.route
-                    } else {
-                        currentRoute
+                    selectedRoute = when (currentRoute) {
+                        Screen.FriendProfile.route -> Screen.Friends.route
+                        Screen.WishListDetail.route -> Screen.MyLists.route
+                        else -> currentRoute
                     },
                     onDestinationSelected = { route ->
                         if (route != currentRoute) {
@@ -166,9 +172,22 @@ fun NavGraph(
                 val wishListsViewModel: WishListsViewModel = koinViewModel()
                 WishListsScreen(
                     viewModel = wishListsViewModel,
-                    onWishListClick = { _ ->
-                        // Navegación futura a detalle de lista
+                    onWishListClick = { listId ->
+                        navController.navigate(Screen.WishListDetail.createRoute(listId))
                     }
+                )
+            }
+
+            composable(
+                route = Screen.WishListDetail.route,
+                arguments = listOf(navArgument("listId") { type = NavType.StringType })
+            ) { backStackEntry ->
+                val listId = requireNotNull(backStackEntry.arguments?.getString("listId"))
+                val wishListDetailViewModel: WishListDetailViewModel = koinViewModel()
+                WishListDetailScreen(
+                    listId = listId,
+                    viewModel = wishListDetailViewModel,
+                    onBackClick = { navController.popBackStack() }
                 )
             }
 
