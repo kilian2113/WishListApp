@@ -2,7 +2,6 @@ package es.ulpgc.wishlistapp.ui.navigation
 
 import android.net.Uri
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
@@ -35,6 +34,8 @@ import es.ulpgc.wishlistapp.ui.profile.ProfileScreen
 import es.ulpgc.wishlistapp.ui.profile.ProfileViewModel
 import es.ulpgc.wishlistapp.ui.register.RegisterScreen
 import es.ulpgc.wishlistapp.ui.register.RegisterViewModel
+import es.ulpgc.wishlistapp.ui.wishlists.WishListsScreen
+import es.ulpgc.wishlistapp.ui.wishlists.WishListsViewModel
 import org.koin.androidx.compose.koinViewModel
 
 sealed class Screen(val route: String) {
@@ -162,7 +163,13 @@ fun NavGraph(
             }
 
             composable(Screen.MyLists.route) {
-                Box(modifier = Modifier.fillMaxSize())
+                val wishListsViewModel: WishListsViewModel = koinViewModel()
+                WishListsScreen(
+                    viewModel = wishListsViewModel,
+                    onWishListClick = { _ ->
+                        // Navegación futura a detalle de lista
+                    }
+                )
             }
 
             composable(Screen.Friends.route) {
